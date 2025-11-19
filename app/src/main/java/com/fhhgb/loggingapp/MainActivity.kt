@@ -1,11 +1,10 @@
 package com.fhhgb.loggingapp
 
-import android.content.Context
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -18,18 +17,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,25 +39,32 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.fhhgb.loggingapp.ui.theme.LoggingAppTheme
+import com.fhhgb.loggingapp.ui.theme.darkGreen
+import com.fhhgb.loggingapp.ui.theme.tintColor
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        setContent {
-            MainScreen()
-        }
+        val viewModel: LoginViewModel by viewModels()
 
+        setContent {
+            val loginState by viewModel.loginState.collectAsState()
+            MainScreen(loginState, viewModel::onAction)
+        }
     }
 
     @Composable
-    fun MainScreen() {
-        val context = LocalContext.current
+    fun MainScreen(
+        loginState: LoginViewModel.LoginState,
+        runAction: (LoginViewModel.LoginAction) -> Unit
+    ) {
+        LocalContext.current
         LoggingAppTheme {
             Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                 Column(
@@ -65,7 +72,7 @@ class MainActivity : ComponentActivity() {
                         .padding(paddingValues = innerPadding)
                         .padding(all = dimensionResource(R.dimen.padding_medium))
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()) // to allow scrolling when content doesn't fit on screen (landscape mode)
+                        .verticalScroll(rememberScrollState())
                 ) {
                     Spacer(modifier = Modifier.height(dimensionResource(R.dimen.height_large)))
                     Image(
@@ -77,40 +84,76 @@ class MainActivity : ComponentActivity() {
                             .align(Alignment.CenterHorizontally)
                     )
 
-                    var username by rememberSaveable { mutableStateOf("") } // to keep username when phone rotates
                     OutlinedTextField(
-                        value = username,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                        onValueChange = { input -> username = input },
+                        value = loginState.userName, //Prefill the username on next startup
+                        onValueChange = { input -> runAction(LoginViewModel.LoginAction.OnUserNameChanged(input)) },
                         leadingIcon = { Icon(Icons.Rounded.Person, contentDescription = "Icon") },
                         label = { Text(text = stringResource(R.string.username)) },
                         modifier = Modifier
                             .padding(vertical = dimensionResource(R.dimen.padding_medium))
-                            .fillMaxWidth()
-                        //placeholder = {Text(text = "Placeholder")}
+                            .fillMaxWidth(),
+                        isError = loginState.isError, // for the red outlines
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Default),
                     )
-
-                    var password by rememberSaveable { mutableStateOf("") } // to keep password when phone rotates
                     OutlinedTextField(
-                        value = password,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                        onValueChange = { input -> password = input },
+                        value = loginState.password,
+                        onValueChange = { input -> runAction(LoginViewModel.LoginAction.OnUserPasswordChanged(input)) },
                         leadingIcon = { Icon(Icons.Rounded.Lock, contentDescription = "Icon") },
                         label = { Text(text = stringResource(R.string.password)) },
                         modifier = Modifier
                             .padding(vertical = dimensionResource(R.dimen.padding_medium))
-                            .fillMaxWidth()
+                            .fillMaxWidth(),
+                        isError = loginState.isError, // for the red outlines
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Default),
                     )
 
                     Button(
                         modifier = Modifier
                             .padding(vertical = dimensionResource(R.dimen.padding_medium))
                             .fillMaxWidth(),
-                        onClick = { checkCredentials(context, username, password) }) {
+                        onClick = { runAction(LoginViewModel.LoginAction.VerifyLoginData) }) {
                         Text(
                             text = stringResource(R.string.login),
                             fontSize = dimensionResource(R.dimen.text_large).value.sp,
                             fontWeight = FontWeight.Bold
+                        )
+                    }
+                    if (loginState.showDialog) {
+                        AlertDialog(
+                            onDismissRequest = {},
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "Icon",
+                                    tint = tintColor
+                                )
+                            },
+                            title = {
+                                if (loginState.isLoggedIn)
+                                    Text(
+                                        stringResource(R.string.success),
+                                        color = darkGreen
+                                    )
+                                else
+                                    Text(
+                                        stringResource(R.string.fail),
+                                        color = Color.Red
+                                    )
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = { runAction(LoginViewModel.LoginAction.ResetDialog) }
+                                ) {
+                                    Text(stringResource(R.string.confirm))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    onClick = { runAction(LoginViewModel.LoginAction.ResetDialog) }
+                                ) {
+                                    Text(stringResource(R.string.dismiss))
+                                }
+                            }
                         )
                     }
                 }
@@ -118,16 +161,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun checkCredentials(context: Context, username: String, password: String) {
-        if (username == "admin" && password == "password123")
-            Toast.makeText(context, "Logged in", Toast.LENGTH_SHORT).show()
-        else
-            Toast.makeText(context, "Wrong credentials", Toast.LENGTH_SHORT).show()
-    }
-
     @Composable
     @Preview
     fun ExamplePreview() {
-        MainScreen()
+        MainScreen(
+            LoginViewModel.LoginState(),
+            {}
+        )
     }
 }
