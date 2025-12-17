@@ -1,5 +1,6 @@
 package com.fhhgb.loggingapp
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,16 +18,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,8 +41,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.fhhgb.loggingapp.ui.theme.LoggingAppTheme
-import com.fhhgb.loggingapp.ui.theme.darkGreen
-import com.fhhgb.loggingapp.ui.theme.tintColor
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,7 +60,8 @@ class MainActivity : ComponentActivity() {
         loginState: LoginViewModel.LoginState,
         runAction: (LoginViewModel.LoginAction) -> Unit
     ) {
-        LocalContext.current
+        val context = LocalContext.current
+
         LoggingAppTheme {
             Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                 Column(
@@ -85,8 +82,10 @@ class MainActivity : ComponentActivity() {
                     )
 
                     OutlinedTextField(
-                        value = loginState.userName, //Prefill the username on next startup
-                        onValueChange = { input -> runAction(LoginViewModel.LoginAction.OnUserNameChanged(input)) },
+                        value = loginState.userName,
+                        onValueChange = { input ->
+                            runAction(LoginViewModel.LoginAction.OnUserNameChanged(input))
+                        },
                         leadingIcon = { Icon(Icons.Rounded.Person, contentDescription = "Icon") },
                         label = { Text(text = stringResource(R.string.username)) },
                         modifier = Modifier
@@ -95,9 +94,12 @@ class MainActivity : ComponentActivity() {
                         isError = loginState.isError, // for the red outlines
                         keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Default),
                     )
+
                     OutlinedTextField(
                         value = loginState.password,
-                        onValueChange = { input -> runAction(LoginViewModel.LoginAction.OnUserPasswordChanged(input)) },
+                        onValueChange = { input ->
+                            runAction(LoginViewModel.LoginAction.OnUserPasswordChanged(input))
+                        },
                         leadingIcon = { Icon(Icons.Rounded.Lock, contentDescription = "Icon") },
                         label = { Text(text = stringResource(R.string.password)) },
                         modifier = Modifier
@@ -111,49 +113,19 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier
                             .padding(vertical = dimensionResource(R.dimen.padding_medium))
                             .fillMaxWidth(),
-                        onClick = { runAction(LoginViewModel.LoginAction.VerifyLoginData) }) {
+                        onClick = {
+                            runAction(LoginViewModel.LoginAction.VerifyLoginData)
+                            if (loginState.isLoggedIn) {
+                                context.startActivity(
+                                    Intent(context, ShowcaseActivity::class.java)
+                                )
+                            }
+                        }
+                    ) {
                         Text(
                             text = stringResource(R.string.login),
                             fontSize = dimensionResource(R.dimen.text_large).value.sp,
                             fontWeight = FontWeight.Bold
-                        )
-                    }
-                    if (loginState.showDialog) {
-                        AlertDialog(
-                            onDismissRequest = {},
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = "Icon",
-                                    tint = tintColor
-                                )
-                            },
-                            title = {
-                                if (loginState.isLoggedIn)
-                                    Text(
-                                        stringResource(R.string.success),
-                                        color = darkGreen
-                                    )
-                                else
-                                    Text(
-                                        stringResource(R.string.fail),
-                                        color = Color.Red
-                                    )
-                            },
-                            confirmButton = {
-                                Button(
-                                    onClick = { runAction(LoginViewModel.LoginAction.ResetDialog) }
-                                ) {
-                                    Text(stringResource(R.string.confirm))
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(
-                                    onClick = { runAction(LoginViewModel.LoginAction.ResetDialog) }
-                                ) {
-                                    Text(stringResource(R.string.dismiss))
-                                }
-                            }
                         )
                     }
                 }

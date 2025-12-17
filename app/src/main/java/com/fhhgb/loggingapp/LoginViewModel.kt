@@ -18,14 +18,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         val password: String = "",
         val isError: Boolean = false,
         val isLoggedIn: Boolean = false,
-        val showDialog: Boolean = true,
     )
 
     sealed class LoginAction {
         data class OnUserNameChanged(val input: String) : LoginAction()
         data class OnUserPasswordChanged(val input: String) : LoginAction()
         object VerifyLoginData : LoginAction()
-        object ResetDialog : LoginAction()
     }
 
     val loginState = MutableStateFlow(value = LoginState())
@@ -65,7 +63,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     loginState.value.userName,
                     loginState.value.password
                 )
-                loginState.value = loginState.value.copy(showDialog = true)
             }
 
             is LoginAction.OnUserPasswordChanged -> {
@@ -74,10 +71,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
             is LoginAction.OnUserNameChanged -> {
                 loginState.value = loginState.value.copy(userName = action.input)
-            }
-
-            LoginAction.ResetDialog -> {
-                loginState.value = loginState.value.copy(showDialog = false)
             }
         }
     }
