@@ -2,6 +2,7 @@ package com.fhhgb.loggingapp
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -48,14 +50,23 @@ class ShowcaseActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             LoggingAppTheme {
-                MainContent()
+                val showcaseViewModel: ShowcaseViewModel = viewModel()
+                val state by showcaseViewModel.uiState.collectAsState()
+
+                MainContent(
+                    state = state,
+                    runAction = showcaseViewModel::dispatch
+                )
             }
         }
     }
 }
 
 @Composable
-private fun MainContent() {
+private fun MainContent(
+    state: ShowcaseViewModel.UiState,
+    runAction: (ShowcaseViewModel.Action) -> Unit
+) {
     val navController = rememberNavController()
     var currentRoute by remember { mutableStateOf(Overview.route) }
     Scaffold(
@@ -121,14 +132,21 @@ private fun MainContent() {
         },
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
-        NavigationManager(innerPadding, navController)
+        NavigationManager(
+            innerPadding = innerPadding,
+            navController = navController,
+            state = state,
+            runAction = runAction
+        )
     }
 }
 
 @Composable
 private fun NavigationManager(
     innerPadding: PaddingValues,
-    navController: NavHostController
+    navController: NavHostController,
+    state: ShowcaseViewModel.UiState,
+    runAction: (ShowcaseViewModel.Action) -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -185,7 +203,61 @@ private fun NavigationManager(
             Text("Sensor", modifier = Modifier.fillMaxSize()) //Fill the screen in here
         }
         composable(Intents.route) {
-            Text("Intents", modifier = Modifier.fillMaxSize()) //Fill the screen in here
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(dimensionResource(R.dimen.padding_medium)),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (state.showWeb) {
+                    val intent = Intent(Intent.ACTION_VIEW)
+                    intent.data = Uri.parse("https://google.com")
+
+                    val context = LocalContext.current
+                    context.startActivity(intent)
+
+                    //reset state
+                    runAction(ShowcaseViewModel.Action.OpenWeb(shouldOpen = false))
+                }
+                if (state.showPhone) {
+                    val intent = Intent(Intent.ACTION_DIAL)
+                    intent.data = "tel:0123456789".toUri()
+
+                    val context = LocalContext.current
+                    context.startActivity(intent)
+
+                    //reset state
+                    runAction(ShowcaseViewModel.Action.OpenPhone(shouldOpen = false))
+                }
+                if (state.showMap) {
+                    val intent = Intent(Intent.ACTION_VIEW)
+                    intent.data = "geo:48.2082,16.3738".toUri()
+
+                    val context = LocalContext.current
+                    context.startActivity(intent)
+
+                    //reset state
+                    runAction(ShowcaseViewModel.Action.OpenMap(false))
+                }
+                Button(
+                    onClick = {runAction(ShowcaseViewModel.Action.OpenWeb(shouldOpen = true))}
+                ) {
+                    Text("Web")
+                }
+
+                Button(
+                    onClick = {runAction(ShowcaseViewModel.Action.OpenPhone(shouldOpen = true))}
+                ) {
+                    Text("Phone")
+                }
+
+                Button(
+                    onClick = {runAction(ShowcaseViewModel.Action.OpenMap(shouldOpen = true))}
+                ) {
+                    Text("Map")
+                }
+            }
         }
     }
 }
@@ -194,6 +266,6 @@ private fun NavigationManager(
 @Composable
 fun NavigationPreview() {
     LoggingAppTheme {
-        MainContent()
+        MainContent(state = ShowcaseViewModel.UiState(), runAction = {})
     }
 }
