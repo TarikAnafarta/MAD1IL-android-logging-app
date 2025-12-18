@@ -24,6 +24,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         data class OnUserNameChanged(val input: String) : LoginAction()
         data class OnUserPasswordChanged(val input: String) : LoginAction()
         object VerifyLoginData : LoginAction()
+        object Logout : LoginAction()
     }
 
     val loginState = MutableStateFlow(value = LoginState())
@@ -63,6 +64,13 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     loginState.value.userName,
                     loginState.value.password
                 )
+            }
+
+            LoginAction.Logout -> {
+                sharedPreferences.edit {
+                    putBoolean("isLoggedIn", false)
+                }
+                loginState.value = loginState.value.copy(isLoggedIn = false)
             }
 
             is LoginAction.OnUserPasswordChanged -> {

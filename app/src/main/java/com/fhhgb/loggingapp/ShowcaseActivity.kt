@@ -1,5 +1,7 @@
 package com.fhhgb.loggingapp
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Preview
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -29,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -148,6 +152,7 @@ private fun NavigationManager(
         composable(Person.route) {
             val viewModel: LoginViewModel = viewModel()
             val uiState by viewModel.loginState.collectAsState()
+            val context = LocalContext.current
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -159,6 +164,20 @@ private fun NavigationManager(
                 Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_small)))
                 Text(text = "Username: ${uiState.userName}")
                 Text(text = "Logged in: ${uiState.isLoggedIn}")
+
+                Button(
+                    onClick = {
+                        viewModel.onAction(LoginViewModel.LoginAction.Logout)
+
+                        val intent = Intent(context, MainActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        context.startActivity(intent)
+
+                        (context as Activity).finish()
+                    }
+                ) {
+                    Text("Logout")
+                }
             }
         }
 
